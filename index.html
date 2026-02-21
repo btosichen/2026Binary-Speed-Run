@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2進制極速挑戰 - 街機派對版</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                        sans: ['"Fredoka"', 'sans-serif'],
+                    },
+                    colors: {
+                        pop: {
+                            pink: '#ff6b9e',
+                            yellow: '#ffd000',
+                            blue: '#4db8ff',
+                            green: '#00e676',
+                            purple: '#b366ff',
+                            dark: '#1e293b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #fdf2f8;
+            background-image: 
+                radial-gradient(#ffd000 2px, transparent 2px),
+                radial-gradient(#4db8ff 2px, transparent 2px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+        
+        /* 街機粗野風格 (Neo-Brutalism) */
+        .neo-box {
+            background-color: #ffffff;
+            border: 4px solid #1e293b;
+            border-radius: 16px;
+            box-shadow: 8px 8px 0px #1e293b;
+        }
+
+        .neo-btn {
+            border: 4px solid #1e293b;
+            border-radius: 12px;
+            box-shadow: 4px 4px 0px #1e293b;
+            font-weight: 800;
+            transition: all 0.1s ease;
+        }
+
+        .neo-btn:active, .neo-btn.active-press {
+            box-shadow: 0px 0px 0px #1e293b;
+            transform: translate(4px, 4px);
+        }
+
+        /* 8-bit LED Bulbs - 明亮版 */
+        .led-bulb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            border: 3px solid #1e293b;
+            transition: all 0.1s ease;
+            position: relative;
+            box-shadow: inset 0 -3px 0 rgba(0,0,0,0.1);
+        }
+        @media (max-width: 640px) {
+            .led-bulb { width: 22px; height: 22px; border-width: 2px; }
+        }
+        .led-bulb.on {
+            background: #ffd000;
+            box-shadow: 0 0 15px #ffd000, inset 0 -3px 0 #d4af37;
+            border-color: #1e293b;
+        }
+        .led-bulb::after {
+            content: attr(data-val);
+            position: absolute;
+            top: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+        }
+        .led-bulb.on::after { color: #1e293b; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-left: 2px solid #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #ff6b9e; border: 2px solid #1e293b; border-radius: 5px; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+        .shake { animation: shake 0.4s ease-in-out; }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col selection:bg-pop-pink selection:text-white">
+
+    <main class="flex-grow flex items-center justify-center p-4 relative z-10">
+        
+        <!-- ==================== 視圖 1: 登入畫面 ==================== -->
+        <div id="view-login" class="w-full max-w-md neo-box p-8 transform transition-all duration-500 bg-white">
+            <div class="text-center mb-8">
+                <div class="inline-block bg-pop-yellow p-4 rounded-full border-4 border-pop-dark shadow-[4px_4px_0px_#1e293b] mb-4">
+                    <i class="fa-solid fa-gamepad text-5xl text-pop-dark"></i>
+                </div>
+                <h1 class="text-4xl font-black tracking-wide text-pop-dark drop-shadow-md">二進位極速挑戰</h1>
+                <p class="text-pop-pink font-bold mt-2 font-mono bg-pop-dark text-white inline-block px-3 py-1 rounded-full text-sm">LEVEL UP YOUR BRAIN</p>
+            </div>
+            
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label class="block text-pop-dark font-bold mb-1">班級 Class</label>
+                    <select id="input-class" required class="w-full bg-slate-100 border-4 border-pop-dark rounded-xl px-4 py-3 text-pop-dark font-bold focus:outline-none focus:bg-white transition-colors cursor-pointer appearance-none shadow-[4px_4px_0px_#1e293b]">
+                        <option value="" disabled selected>請選擇班級</option>
+                        <option value="901">901 班</option>
+                        <option value="902">902 班</option>
+                        <option value="903">903 班</option>
+                        <option value="904">904 班</option>
+                        <option value="905">905 班</option>
+                        <option value="906">906 班</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-pop-dark font-bold mb-1">座號 Seat</label>
+                        <input type="number" id="input-seat" required min="1" max="99" class="w-full bg-slate-100 border-4 border-pop-dark rounded-xl px-4 py-3 text-pop-dark font-bold focus:outline-none focus:bg-white shadow-[4px_4px_0px_#1e293b]" placeholder="例: 1">
+                    </div>
+                    <div>
+                        <label class="block text-pop-dark font-bold mb-1">姓名 Name</label>
+                        <input type="text" id="input-name" required class="w-full bg-slate-100 border-4 border-pop-dark rounded-xl px-4 py-3 text-pop-dark font-bold focus:outline-none focus:bg-white shadow-[4px_4px_0px_#1e293b]" placeholder="你的大名">
+                    </div>
+                </div>
+                <button type="submit" class="w-full mt-6 bg-pop-green text-pop-dark font-black text-xl py-4 px-4 rounded-xl neo-btn hover:bg-green-400">
+                    START GAME <i class="fa-solid fa-play ml-2"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- ==================== 視圖 2: 主選單 ==================== -->
+        <div id="view-menu" class="w-full max-w-4xl hidden flex-col gap-6 transform transition-all duration-500 opacity-0 scale-95">
+            <!-- Header -->
+            <div class="flex justify-between items-center bg-white neo-box p-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-xl border-4 border-pop-dark bg-pop-blue flex items-center justify-center text-3xl text-white shadow-[2px_2px_0px_#1e293b]">
+                        <i class="fa-solid fa-user-ninja"></i>
+                    </div>
+                    <div>
+                        <h2 id="display-player-name" class="text-2xl font-black text-pop-dark">玩家姓名</h2>
+                        <p id="display-player-info" class="text-sm font-bold bg-pop-dark text-white px-2 py-0.5 rounded-md inline-block mt-1">班級 座號</p>
+                    </div>
+                </div>
+                <button id="btn-logout" class="neo-btn bg-slate-200 text-pop-dark w-12 h-12 flex items-center justify-center text-xl hover:bg-slate-300">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+
+            <!-- Dashboard Stats -->
+            <div class="grid grid-cols-3 gap-4">
+                <div class="neo-box p-4 text-center bg-pop-yellow">
+                    <div class="text-pop-dark font-bold text-sm mb-1">挑戰次數</div>
+                    <div id="stat-games" class="text-3xl font-black font-mono text-pop-dark">0</div>
+                </div>
+                <div class="neo-box p-4 text-center bg-pop-pink text-white">
+                    <div class="font-bold text-sm mb-1">平均答對率</div>
+                    <div id="stat-acc" class="text-3xl font-black font-mono">0%</div>
+                </div>
+                <div class="neo-box p-4 text-center bg-pop-blue text-white">
+                    <div class="font-bold text-sm mb-1">最快紀錄</div>
+                    <div id="stat-time" class="text-3xl font-black font-mono">--.-s</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 左側：快速遊玩設定 -->
+                <div class="neo-box p-6 relative overflow-hidden bg-white">
+                    <h3 class="text-2xl font-black mb-6 text-pop-dark border-b-4 border-pop-dark pb-2">
+                        <i class="fa-solid fa-bolt text-pop-yellow drop-shadow-md"></i> 快速挑戰
+                    </h3>
+                    
+                    <div class="space-y-5">
+                        <div>
+                            <label class="font-bold text-pop-dark block mb-2">選擇模式</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <button data-mode="dec2bin" class="mode-btn neo-btn bg-slate-100 text-pop-dark py-2">10轉2</button>
+                                <button data-mode="bin2dec" class="mode-btn neo-btn bg-slate-100 text-pop-dark py-2">2轉10</button>
+                                <button data-mode="mixed" class="mode-btn neo-btn bg-pop-blue text-white py-2">混合</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-bold text-pop-dark block mb-2">數字難度</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <button data-diff="15" class="diff-btn neo-btn bg-pop-purple text-white py-2">1~15</button>
+                                <button data-diff="31" class="diff-btn neo-btn bg-slate-100 text-pop-dark py-2">1~31</button>
+                                <button data-diff="63" class="diff-btn neo-btn bg-slate-100 text-pop-dark py-2">1~63</button>
+                            </div>
+                        </div>
+                        <button id="btn-start-quick" class="w-full bg-pop-green text-pop-dark font-black py-4 rounded-xl hover:bg-green-400 text-2xl neo-btn mt-4">
+                            GO! <i class="fa-solid fa-rocket"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 右側：其他功能 -->
+                <div class="flex flex-col gap-4">
+                    <button id="btn-nav-map" class="neo-box neo-btn bg-pop-yellow p-5 flex items-center justify-between hover:bg-yellow-300 group">
+                        <div class="flex items-center gap-4">
+                            <i class="fa-solid fa-map-location-dot text-4xl text-pop-dark"></i>
+                            <div class="text-left">
+                                <h4 class="text-xl font-black text-pop-dark">闖關地圖</h4>
+                                <p class="font-bold text-pop-dark/70 text-sm">Level up step by step</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-caret-right text-3xl text-pop-dark"></i>
+                    </button>
+
+                    <button id="btn-nav-tutorial" class="neo-box neo-btn bg-pop-pink p-5 flex items-center justify-between hover:bg-pink-400 group text-white">
+                        <div class="flex items-center gap-4">
+                            <i class="fa-solid fa-graduation-cap text-4xl text-white"></i>
+                            <div class="text-left">
+                                <h4 class="text-xl font-black">教學解析</h4>
+                                <p class="font-bold text-white/80 text-sm">Learn the basics</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-caret-right text-3xl"></i>
+                    </button>
+
+                    <button id="btn-nav-leaderboard" class="neo-box neo-btn bg-pop-blue p-5 flex items-center justify-between hover:bg-blue-400 group text-white">
+                        <div class="flex items-center gap-4">
+                            <i class="fa-solid fa-trophy text-4xl text-white"></i>
+                            <div class="text-left">
+                                <h4 class="text-xl font-black">全班排行榜</h4>
+                                <p class="font-bold text-white/80 text-sm">Who is the champion?</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-caret-right text-3xl"></i>
+                    </button>
+                    
+                    <!-- 教師專區按鈕 -->
+                    <button id="btn-nav-teacher" class="neo-box neo-btn bg-pop-dark p-3 flex items-center justify-center hover:bg-slate-800 text-white mt-auto">
+                        <i class="fa-solid fa-user-tie mr-2"></i> 教師專區 (需密碼)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 視圖 3: 闖關地圖 ==================== -->
+        <div id="view-map" class="w-full max-w-4xl hidden flex-col transform transition-all duration-500 opacity-0 scale-95">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-3xl font-black text-pop-dark bg-white neo-box px-6 py-2 inline-block"><i class="fa-solid fa-map text-pop-purple"></i> 冒險地圖</h2>
+                <button class="btn-back neo-btn bg-white text-pop-dark px-4 py-2"><i class="fa-solid fa-arrow-left"></i> 返回</button>
+            </div>
+            
+            <div class="neo-box p-8 bg-white relative min-h-[400px] flex items-center justify-center overflow-hidden">
+                <div class="absolute w-full h-4 bg-pop-dark top-1/2 -translate-y-1/2 z-0"></div>
+                
+                <div class="relative z-10 flex justify-around w-full max-w-3xl">
+                    <!-- 關卡 1 -->
+                    <button data-level="1" class="map-node flex flex-col items-center gap-3 transform hover:scale-110 transition-transform">
+                        <div class="w-20 h-20 rounded-full bg-pop-yellow neo-btn flex items-center justify-center text-3xl font-black text-pop-dark relative">
+                            1
+                            <div class="absolute -top-3 -right-3 text-pop-pink text-2xl"><i class="fa-solid fa-star"></i></div>
+                        </div>
+                        <div class="bg-pop-dark text-white px-4 py-2 rounded-xl border-2 border-pop-dark text-center shadow-[2px_2px_0px_#1e293b]">
+                            <p class="font-black text-pop-yellow">啟蒙村</p>
+                            <p class="font-mono text-xs mt-1">10轉2(簡單)</p>
+                        </div>
+                    </button>
+                    <!-- 關卡 2 -->
+                    <button data-level="2" class="map-node flex flex-col items-center gap-3 transform hover:scale-110 transition-transform">
+                        <div class="w-20 h-20 rounded-full bg-pop-blue neo-btn flex items-center justify-center text-3xl font-black text-white">2</div>
+                        <div class="bg-pop-dark text-white px-4 py-2 rounded-xl border-2 border-pop-dark text-center shadow-[2px_2px_0px_#1e293b]">
+                            <p class="font-black text-pop-blue">反轉城</p>
+                            <p class="font-mono text-xs mt-1">2轉10(簡單)</p>
+                        </div>
+                    </button>
+                    <!-- 關卡 3 -->
+                    <button data-level="3" class="map-node flex flex-col items-center gap-3 transform hover:scale-110 transition-transform">
+                        <div class="w-20 h-20 rounded-full bg-pop-pink neo-btn flex items-center justify-center text-3xl font-black text-white">3</div>
+                        <div class="bg-pop-dark text-white px-4 py-2 rounded-xl border-2 border-pop-dark text-center shadow-[2px_2px_0px_#1e293b]">
+                            <p class="font-black text-pop-pink">混亂海</p>
+                            <p class="font-mono text-xs mt-1">隨機(中等)</p>
+                        </div>
+                    </button>
+                    <!-- 關卡 4 -->
+                    <button data-level="4" class="map-node flex flex-col items-center gap-3 transform hover:scale-110 transition-transform">
+                        <div class="w-20 h-20 rounded-full bg-pop-purple neo-btn flex items-center justify-center text-3xl font-black text-white relative">
+                            <i class="fa-solid fa-skull"></i>
+                        </div>
+                        <div class="bg-pop-dark text-white px-4 py-2 rounded-xl border-2 border-pop-dark text-center shadow-[2px_2px_0px_#1e293b]">
+                            <p class="font-black text-pop-purple">極限島</p>
+                            <p class="font-mono text-xs mt-1">隨機(困難)</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 視圖 4: 教學模式 ==================== -->
+        <div id="view-tutorial" class="w-full max-w-3xl hidden flex-col transform transition-all duration-500 opacity-0 scale-95">
+             <div class="flex items-center justify-between mb-6">
+                <h2 class="text-3xl font-black text-pop-dark bg-white neo-box px-6 py-2 inline-block"><i class="fa-solid fa-lightbulb text-pop-yellow"></i> 遊戲教學</h2>
+                <button class="btn-back neo-btn bg-white text-pop-dark px-4 py-2"><i class="fa-solid fa-arrow-left"></i> 返回</button>
+            </div>
+
+            <div class="neo-box p-8 bg-white flex flex-col items-center">
+                <div class="flex gap-4 mb-8 bg-slate-100 p-2 rounded-xl border-4 border-pop-dark">
+                    <button id="tut-btn-dec" class="neo-btn bg-pop-pink text-white px-6 py-2">十轉二</button>
+                    <button id="tut-btn-bin" class="neo-btn bg-white text-pop-dark px-6 py-2">二轉十</button>
+                </div>
+
+                <div class="text-center mb-8 h-24 flex flex-col justify-center">
+                    <p id="tut-desc" class="text-xl font-bold text-pop-dark"></p>
+                    <p id="tut-math" class="text-3xl font-mono text-pop-blue mt-2 font-black"></p>
+                </div>
+
+                <!-- 8-Bit Display (Tutorial) -->
+                <div class="flex flex-row-reverse space-x-2 space-x-reverse mb-10 bg-pop-dark p-6 rounded-xl border-4 border-pop-dark shadow-[4px_4px_0px_rgba(0,0,0,0.2)]" id="tut-leds">
+                    <!-- JS 生成 -->
+                </div>
+
+                <div class="flex gap-4">
+                    <button id="btn-tut-next" class="bg-pop-green text-pop-dark px-8 py-3 text-xl neo-btn"><i class="fa-solid fa-forward"></i> 下一步</button>
+                    <button id="btn-tut-rand" class="bg-pop-yellow text-pop-dark px-6 py-3 text-xl neo-btn"><i class="fa-solid fa-dice"></i> 換一題</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 視圖 5: 遊戲畫面 ==================== -->
+        <div id="view-game" class="w-full max-w-2xl hidden flex-col transform transition-all duration-500 opacity-0 scale-95">
+            
+            <div class="neo-box bg-white overflow-hidden flex flex-col">
+                <!-- 頂部資訊列 -->
+                <div class="bg-pop-dark p-4 flex justify-between items-center text-white border-b-4 border-pop-dark">
+                    <div class="font-mono text-2xl font-black w-1/3 flex items-center text-pop-yellow">
+                        <i class="fa-solid fa-clock mr-2"></i><span id="game-timer">00.0</span>s
+                    </div>
+                    <div class="text-center w-1/3">
+                        <span class="text-xs font-bold block bg-white text-pop-dark px-2 rounded-full mx-auto w-fit mb-1">STAGE</span>
+                        <span id="game-q-count" class="text-xl font-black">1 / 10</span>
+                    </div>
+                    <div class="font-mono text-2xl font-black text-right w-1/3 flex items-center justify-end text-pop-green">
+                        <span id="game-score">0</span><i class="fa-solid fa-check-circle ml-2"></i>
+                    </div>
+                </div>
+                
+                <!-- 進度條 -->
+                <div class="w-full h-3 bg-slate-200">
+                    <div id="game-progress" class="h-full bg-pop-pink w-0 transition-all duration-300"></div>
+                </div>
+
+                <!-- 主遊戲區 -->
+                <div class="p-8 flex flex-col items-center relative">
+                    <!-- 回饋動畫 -->
+                    <div id="feedback-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-0 transition-opacity duration-200 z-50 rounded-b-xl">
+                        <div id="feedback-icon" class="text-9xl drop-shadow-[0_10px_0_rgba(0,0,0,0.2)]"></div>
+                    </div>
+
+                    <div class="text-center mb-6">
+                        <div id="game-instruction" class="text-pop-dark font-black text-xl mb-4 bg-pop-yellow px-4 py-1 rounded-full border-2 border-pop-dark inline-block shadow-[2px_2px_0px_#1e293b]">轉換為 二進制</div>
+                        <div class="flex items-center justify-center gap-2">
+                            <div id="game-question" class="text-7xl font-black font-mono tracking-wider text-pop-dark drop-shadow-md">13</div>
+                            <div id="game-base-indicator" class="text-2xl font-black font-mono text-pop-pink self-end mb-2">(10)</div>
+                        </div>
+                    </div>
+
+                    <!-- 8-Bit Display (Game) -->
+                    <div class="flex flex-row-reverse space-x-1 sm:space-x-2 space-x-reverse mb-8 bg-slate-100 p-4 rounded-xl border-4 border-pop-dark" id="game-leds">
+                        <!-- JS 生成 -->
+                    </div>
+
+                    <!-- 輸入區 -->
+                    <div class="w-full max-w-sm">
+                        <input type="text" id="game-input" readonly class="w-full bg-white border-4 border-pop-dark rounded-xl px-4 py-4 text-4xl text-center text-pop-dark font-mono font-black tracking-[0.2em] mb-6 shadow-[4px_4px_0px_#1e293b] focus:outline-none" placeholder="?">
+                        
+                        <!-- 二進位專用鍵盤 -->
+                        <div id="keyboard-bin" class="grid grid-cols-2 gap-4 hidden">
+                            <button data-key="0" class="game-key neo-btn bg-pop-blue text-white font-mono text-5xl py-6">0</button>
+                            <button data-key="1" class="game-key neo-btn bg-pop-pink text-white font-mono text-5xl py-6">1</button>
+                        </div>
+
+                        <!-- 十進位專用鍵盤 -->
+                        <div id="keyboard-dec" class="grid grid-cols-3 gap-3 hidden">
+                            <button data-key="1" class="game-key neo-btn bg-white text-pop-dark text-3xl py-4">1</button>
+                            <button data-key="2" class="game-key neo-btn bg-white text-pop-dark text-3xl py-4">2</button>
+                            <button data-key="3" class="game-key neo-btn bg-white text-pop-dark text-3xl py-4">3</button>
+                            <button data-key="4" class="game-key neo-btn bg-white text-pop-dark text-3xl py-4">4</button>
+                            <button data-key="5" class="game-key neo-btn bg-white text-pop-dark text-3xl py-4">5</button>
+                            <button data-key="6" class="game-key neo-btn bg-white text-pop-dark text-3xl py-4">6</button>
+                            <button data-key="7" class="game-key neo-btn bg-white text-pop-dark text-3xl py-4">7</button>
+                            <button data-key="8" class="game-key neo-btn bg-white text-pop-dark text-3xl py-4">8</button>
+                            <button data-key="9" class="game-key neo-btn bg-white text-pop-dark text-3xl py-4">9</button>
+                            <button id="btn-clear" class="neo-btn bg-red-400 text-white text-2xl py-4"><i class="fa-solid fa-xmark"></i></button>
+                            <button data-key="0" class="game-key neo-btn bg-white text-pop-dark text-3xl py-4">0</button>
+                            <button id="btn-del" class="neo-btn bg-slate-300 text-pop-dark text-2xl py-4"><i class="fa-solid fa-delete-left"></i></button>
+                        </div>
+
+                        <button id="btn-submit" class="w-full mt-6 bg-pop-green text-pop-dark font-black py-4 rounded-xl text-2xl neo-btn hover:bg-green-400">
+                            ENTER
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="btn-abort" class="mt-6 text-pop-dark font-bold hover:text-pop-pink transition self-center bg-white px-4 py-2 rounded-full border-2 border-pop-dark shadow-[2px_2px_0px_#1e293b]">
+                <i class="fa-solid fa-flag"></i> 放棄挑戰
+            </button>
+        </div>
+
+        <!-- ==================== 視圖 6: 結算畫面 ==================== -->
+        <div id="view-result" class="w-full max-w-md hidden flex-col transform transition-all duration-500 opacity-0 scale-95">
+            <div class="neo-box p-8 bg-white text-center relative overflow-hidden">
+                <i class="fa-solid fa-crown text-7xl text-pop-yellow mb-4 animate-bounce drop-shadow-[0_5px_0_#1e293b]"></i>
+                <h2 class="text-4xl font-black mb-2 text-pop-dark">MISSION COMPLETE!</h2>
+                
+                <div class="bg-slate-100 rounded-xl p-6 my-6 border-4 border-pop-dark shadow-inner">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="font-bold text-pop-dark/70 mb-1">使用時間</p>
+                            <p id="result-time" class="text-3xl font-black font-mono text-pop-blue">00.0s</p>
+                        </div>
+                        <div>
+                            <p class="font-bold text-pop-dark/70 mb-1">最終得分</p>
+                            <p id="result-score" class="text-3xl font-black font-mono text-pop-pink">10/10</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="upload-status" class="mb-6 h-6 flex justify-center items-center font-bold text-pop-dark text-sm">
+                    <i class="fa-solid fa-spinner fa-spin mr-2 text-pop-blue"></i> 正在上傳成績...
+                </div>
+
+                <div class="flex gap-4">
+                    <button class="btn-back flex-1 bg-slate-200 text-pop-dark py-3 neo-btn text-lg">回主選單</button>
+                    <button id="btn-play-again" class="flex-1 bg-pop-yellow text-pop-dark py-3 neo-btn text-lg">再戰一次</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 視圖 7: 排行榜 ==================== -->
+        <div id="view-leaderboard" class="w-full max-w-3xl hidden flex-col transform transition-all duration-500 opacity-0 scale-95">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-3xl font-black text-pop-dark bg-white neo-box px-6 py-2 inline-block"><i class="fa-solid fa-ranking-star text-pop-yellow"></i> 英雄榜</h2>
+                <button class="btn-back neo-btn bg-white text-pop-dark px-4 py-2"><i class="fa-solid fa-arrow-left"></i> 返回</button>
+            </div>
+
+            <div class="neo-box bg-white overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-pop-dark text-white font-bold text-lg">
+                                <th class="p-4 w-16 text-center border-b-4 border-pop-dark">#</th>
+                                <th class="p-4 border-b-4 border-pop-dark">勇者姓名</th>
+                                <th class="p-4 border-b-4 border-pop-dark">模式</th>
+                                <th class="p-4 border-b-4 border-pop-dark text-center">答對</th>
+                                <th class="p-4 border-b-4 border-pop-dark text-right">時間</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body" class="text-lg font-bold text-pop-dark">
+                            <!-- JS 動態生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 視圖 8: 教師後台 ==================== -->
+        <div id="view-teacher" class="w-full max-w-5xl hidden flex-col transform transition-all duration-500 opacity-0 scale-95">
+             <div class="flex items-center justify-between mb-6">
+                <h2 class="text-3xl font-black text-white bg-pop-dark neo-box px-6 py-2 inline-block"><i class="fa-solid fa-user-tie text-pop-pink"></i> 教師數據中心</h2>
+                <button class="btn-back neo-btn bg-white text-pop-dark px-4 py-2"><i class="fa-solid fa-arrow-left"></i> 登出後台</button>
+            </div>
+
+            <div class="neo-box bg-white overflow-hidden flex flex-col min-h-[500px]">
+                <div class="p-4 bg-slate-100 border-b-4 border-pop-dark flex justify-between items-center">
+                    <span class="font-bold text-pop-dark"><i class="fa-solid fa-database text-pop-blue"></i> 即時雲端數據 (由 GAS 取得)</span>
+                    <button id="btn-refresh-data" class="neo-btn bg-pop-green text-pop-dark px-4 py-1 text-sm"><i class="fa-solid fa-rotate-right"></i> 重新整理</button>
+                </div>
+                <div class="overflow-x-auto flex-grow">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-pop-pink text-white font-bold">
+                                <th class="p-3 border-b-4 border-pop-dark">時間</th>
+                                <th class="p-3 border-b-4 border-pop-dark">班級</th>
+                                <th class="p-3 border-b-4 border-pop-dark">座號</th>
+                                <th class="p-3 border-b-4 border-pop-dark">姓名</th>
+                                <th class="p-3 border-b-4 border-pop-dark">模式</th>
+                                <th class="p-3 border-b-4 border-pop-dark text-center">分數</th>
+                                <th class="p-3 border-b-4 border-pop-dark text-right">秒數</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teacher-data-body" class="text-pop-dark font-medium text-sm">
+                            <tr><td colspan="7" class="text-center p-10 font-bold"><i class="fa-solid fa-spinner fa-spin text-3xl mb-2 text-pop-blue"></i><br>載入資料中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 安全防護：使用 IIFE 閉包完全封裝程式碼，防止學生在控制台存取變數查答案 -->
+    <script>
+    (function() {
+        /**
+         * ==========================================
+         * 系統設定 (Google Apps Script URL)
+         * ==========================================
+         * 請在此填入你部署的 GAS Web App URL
+         */
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyV2Sjk_1WynzJVKFB2IZDkN06etsLusOY2XBsbd7qKiPAeIQVZp2d5QL6xv77zozJl-A/exec"; 
+
+        /**
+         * 內部狀態 (無法從外部 window.state 讀取)
+         */
+        const state = {
+            currentView: 'login',
+            user: { class: '', seat: '', name: '' },
+            settings: { mode: 'mixed', maxRange: 15 }, 
+            game: {
+                // 不直接儲存答案的字串，僅儲存題目與正確解答的驗證機制
+                currentType: '',
+                currentQuestionVal: 0, 
+                questionCount: 0,
+                score: 0,
+                startTime: 0,
+                timerInterval: null,
+                elapsed: 0,
+                isActive: false,
+                currentInput: ''
+            },
+            stats: { games: 0, totalScore: 0, totalQuestions: 0, bestTime: Infinity },
+            leaderboard: [] 
+        };
+
+        const $ = id => document.getElementById(id);
+
+        // 視圖切換邏輯
+        function switchView(viewId) {
+            const currentEl = $(`view-${state.currentView}`);
+            if (currentEl) {
+                currentEl.classList.remove('scale-100', 'opacity-100');
+                currentEl.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    currentEl.classList.add('hidden');
+                    currentEl.classList.remove('flex');
+                    showNext();
+                }, 300);
+            } else {
+                showNext();
+            }
+
+            function showNext() {
+                const nextEl = $(`view-${viewId}`);
+                nextEl.classList.remove('hidden');
+                nextEl.classList.add('flex');
+                void nextEl.offsetWidth; 
+                nextEl.classList.remove('scale-95', 'opacity-0');
+                nextEl.classList.add('scale-100', 'opacity-100');
+                state.currentView = viewId;
+            }
+        }
+
+        // 初始化
+        window.onload = () => {
+            loadLocalStats();
+            generateLEDs('game-leds');
+            generateLEDs('tut-leds', true);
+            bindEvents();
+            setMode('mixed');
+            setDiff(15);
+        };
+
+        function bindEvents() {
+            // 登入
+            $('login-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                state.user.class = $('input-class').value;
+                state.user.seat = $('input-seat').value;
+                state.user.name = $('input-name').value;
+                $('display-player-name').innerText = state.user.name;
+                $('display-player-info').innerText = `${state.user.class}班 ${state.user.seat}號`;
+                updateDashboardStats();
+                switchView('menu');
+            });
+
+            // 選單按鈕
+            $('btn-logout').onclick = () => switchView('login');
+            $('btn-start-quick').onclick = startQuickGame;
+            $('btn-nav-map').onclick = () => switchView('map');
+            $('btn-nav-tutorial').onclick = () => { switchView('tutorial'); setTutorialMode('dec2bin'); };
+            $('btn-nav-leaderboard').onclick = () => { renderLeaderboard(); switchView('leaderboard'); };
+            
+            // 返回按鈕群
+            document.querySelectorAll('.btn-back').forEach(btn => {
+                btn.onclick = () => switchView('menu');
+            });
+
+            // 模式與難度選擇
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.onclick = (e) => setMode(e.target.dataset.mode);
+            });
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.onclick = (e) => setDiff(parseInt(e.target.dataset.diff));
+            });
+
+            // 地圖關卡
+            document.querySelectorAll('.map-node').forEach(btn => {
+                btn.onclick = (e) => startLevelGame(parseInt(e.currentTarget.dataset.level));
+            });
+
+            // 教學按鈕
+            $('tut-btn-dec').onclick = () => setTutorialMode('dec2bin');
+            $('tut-btn-bin').onclick = () => setTutorialMode('bin2dec');
+            $('btn-tut-next').onclick = nextTutorialStep;
+            $('btn-tut-rand').onclick = randomTutorialValue;
+
+            // 遊戲鍵盤與操作
+            document.querySelectorAll('.game-key').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.currentTarget.classList.add('active-press');
+                    setTimeout(() => e.currentTarget.classList.remove('active-press'), 100);
+                    appendInput(e.currentTarget.dataset.key);
+                }
+            });
+            $('btn-clear').onclick = clearInput;
+            $('btn-del').onclick = deleteInput;
+            $('btn-submit').onclick = submitAnswer;
+            $('btn-abort').onclick = abortGame;
+            $('btn-play-again').onclick = startQuickGame;
+
+            // 教師專區加密驗證
+            $('btn-nav-teacher').onclick = checkTeacherPassword;
+            $('btn-refresh-data').onclick = fetchTeacherData;
+
+            // 全局實體鍵盤監聽
+            document.addEventListener('keydown', handleGlobalKeydown);
+        }
+
+        // --- 本機資料 ---
+        function loadLocalStats() {
+            const saved = localStorage.getItem('neoBinStats');
+            if (saved) state.stats = JSON.parse(saved);
+            const savedLb = localStorage.getItem('neoBinLb');
+            if (savedLb) state.leaderboard = JSON.parse(savedLb);
+        }
+
+        function saveLocalStats() {
+            localStorage.setItem('neoBinStats', JSON.stringify(state.stats));
+            localStorage.setItem('neoBinLb', JSON.stringify(state.leaderboard));
+            updateDashboardStats();
+        }
+
+        function updateDashboardStats() {
+            $('stat-games').innerText = state.stats.games;
+            const acc = state.stats.totalQuestions > 0 ? Math.round((state.stats.totalScore / state.stats.totalQuestions) * 100) : 0;
+            $('stat-acc').innerText = `${acc}%`;
+            $('stat-time').innerText = state.stats.bestTime === Infinity ? '--.-s' : `${state.stats.bestTime.toFixed(1)}s`;
+        }
+
+        // --- UI 工具 ---
+        function setMode(mode) {
+            state.settings.mode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.className = "mode-btn neo-btn bg-slate-100 text-pop-dark py-2";
+            });
+            document.querySelector(`[data-mode="${mode}"]`).className = "mode-btn neo-btn bg-pop-blue text-white py-2 shadow-[2px_2px_0px_#1e293b]";
+        }
+
+        function setDiff(val) {
+            state.settings.maxRange = val;
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.className = "diff-btn neo-btn bg-slate-100 text-pop-dark py-2";
+            });
+            document.querySelector(`[data-diff="${val}"]`).className = "diff-btn neo-btn bg-pop-purple text-white py-2 shadow-[2px_2px_0px_#1e293b]";
+        }
+
+        function generateLEDs(containerId, withValues = false) {
+            const container = $(containerId);
+            container.innerHTML = '';
+            for (let i = 0; i < 8; i++) {
+                const bulb = document.createElement('div');
+                bulb.className = 'led-bulb';
+                bulb.id = `${containerId}-bulb-${i}`;
+                if (withValues) bulb.setAttribute('data-val', Math.pow(2, i));
+                else bulb.setAttribute('data-val', '');
+                container.appendChild(bulb);
+            }
+        }
+
+        function updateLEDs(containerId, number) {
+            for (let i = 0; i < 8; i++) {
+                const bulb = $(`${containerId}-bulb-${i}`);
+                if (bulb) {
+                    if ((number & (1 << i)) !== 0) bulb.classList.add('on');
+                    else bulb.classList.remove('on');
+                }
+            }
+        }
+
+        function clearLEDs(containerId) {
+            for (let i = 0; i < 8; i++) {
+                const bulb = $(`${containerId}-bulb-${i}`);
+                if (bulb) bulb.classList.remove('on');
+            }
+        }
+
+        // --- 遊戲邏輯 ---
+        function startLevelGame(level) {
+            switch(level) {
+                case 1: setMode('dec2bin'); setDiff(15); break;
+                case 2: setMode('bin2dec'); setDiff(15); break;
+                case 3: setMode('mixed'); setDiff(31); break;
+                case 4: setMode('mixed'); setDiff(63); break;
+            }
+            startQuickGame();
+        }
+
+        function startQuickGame() {
+            state.game.questionCount = 1;
+            state.game.score = 0;
+            state.game.isActive = true;
+            $('game-progress').style.width = '0%';
+            
+            switchView('game');
+            generateNextQuestion();
+            
+            setTimeout(() => {
+                state.game.startTime = Date.now();
+                state.game.timerInterval = setInterval(updateTimer, 50);
+            }, 300);
+        }
+
+        // 即時產生題目，防止從陣列中查答案
+        function generateNextQuestion() {
+            let m = state.settings.mode;
+            if (m === 'mixed') m = Math.random() > 0.5 ? 'dec2bin' : 'bin2dec';
+            
+            const val = Math.floor(Math.random() * state.settings.maxRange) + 1;
+            state.game.currentType = m;
+            state.game.currentQuestionVal = val;
+            
+            state.game.currentInput = '';
+            $('game-input').value = '';
+            $('game-q-count').innerText = `${state.game.questionCount} / 10`;
+            $('game-score').innerText = state.game.score;
+            $('game-progress').style.width = `${((state.game.questionCount - 1) / 10) * 100}%`;
+            
+            if (m === 'dec2bin') {
+                $('game-instruction').innerText = "轉換為 二進制";
+                $('game-question').innerText = val;
+                $('game-base-indicator').innerText = "(10)";
+                $('game-base-indicator').className = "text-2xl font-black font-mono text-pop-blue self-end mb-2";
+                $('keyboard-bin').classList.remove('hidden');
+                $('keyboard-dec').classList.add('hidden');
+                clearLEDs('game-leds');
+            } else {
+                $('game-instruction').innerText = "轉換為 十進制";
+                $('game-question').innerText = val.toString(2);
+                $('game-base-indicator').innerText = "(2)";
+                $('game-base-indicator').className = "text-2xl font-black font-mono text-pop-pink self-end mb-2";
+                $('keyboard-dec').classList.remove('hidden');
+                $('keyboard-bin').classList.add('hidden');
+                updateLEDs('game-leds', val);
+            }
+        }
+
+        function updateTimer() {
+            if (!state.game.isActive) return;
+            const elapsed = (Date.now() - state.game.startTime) / 1000;
+            state.game.elapsed = elapsed;
+            $('game-timer').innerText = elapsed.toFixed(1);
+        }
+
+        function appendInput(char) {
+            if (!state.game.isActive) return;
+            state.game.currentInput += char;
+            $('game-input').value = state.game.currentInput;
+            
+            if (state.game.currentType === 'dec2bin' && state.game.currentInput.length > 0) {
+                const parsed = parseInt(state.game.currentInput, 2);
+                if (!isNaN(parsed)) updateLEDs('game-leds', parsed);
+            }
+        }
+
+        function deleteInput() {
+            if (!state.game.isActive) return;
+            state.game.currentInput = state.game.currentInput.slice(0, -1);
+            $('game-input').value = state.game.currentInput;
+        }
+
+        function clearInput() {
+            if (!state.game.isActive) return;
+            state.game.currentInput = '';
+            $('game-input').value = '';
+        }
+
+        function handleGlobalKeydown(e) {
+            if (state.currentView !== 'game' || !state.game.isActive) return;
+            const isDec2Bin = state.game.currentType === 'dec2bin';
+
+            if (e.key === 'Enter') submitAnswer();
+            else if (e.key === 'Backspace') deleteInput();
+            else if (e.key === 'Escape') clearInput();
+            else {
+                if (isDec2Bin && (e.key === '0' || e.key === '1')) appendInput(e.key);
+                else if (!isDec2Bin && /^[0-9]$/.test(e.key)) appendInput(e.key);
+            }
+        }
+
+        function submitAnswer() {
+            if (!state.game.isActive || state.game.currentInput === '') return;
+            
+            let isCorrect = false;
+            if (state.game.currentType === 'dec2bin') {
+                if (parseInt(state.game.currentInput, 2) === state.game.currentQuestionVal) isCorrect = true;
+            } else {
+                if (parseInt(state.game.currentInput, 10) === state.game.currentQuestionVal) isCorrect = true;
+            }
+
+            showFeedback(isCorrect);
+            if (isCorrect) state.game.score++;
+            
+            if (state.game.questionCount >= 10) {
+                setTimeout(endGame, 500);
+            } else {
+                state.game.questionCount++;
+                setTimeout(generateNextQuestion, 500);
+            }
+        }
+
+        function showFeedback(isCorrect) {
+            const overlay = $('feedback-overlay');
+            const icon = $('feedback-icon');
+            const container = $('view-game').querySelector('.neo-box');
+
+            if (isCorrect) {
+                icon.className = 'fa-solid fa-check text-pop-green';
+                overlay.style.backgroundColor = 'rgba(0, 230, 118, 0.2)';
+            } else {
+                icon.className = 'fa-solid fa-xmark text-red-500';
+                overlay.style.backgroundColor = 'rgba(2ef, 68, 68, 0.2)';
+                container.classList.add('shake');
+                setTimeout(() => container.classList.remove('shake'), 400);
+            }
+            overlay.classList.remove('opacity-0');
+            setTimeout(() => {
+                overlay.classList.add('opacity-0');
+            }, 300);
+        }
+
+        function abortGame() {
+            clearInterval(state.game.timerInterval);
+            state.game.isActive = false;
+            switchView('menu');
+        }
+
+        function endGame() {
+            clearInterval(state.game.timerInterval);
+            state.game.isActive = false;
+            $('game-progress').style.width = '100%';
+            
+            const finalTime = state.game.elapsed;
+            $('result-time').innerText = finalTime.toFixed(1) + 's';
+            $('result-score').innerText = state.game.score + '/10';
+            
+            state.stats.games++;
+            state.stats.totalScore += state.game.score;
+            state.stats.totalQuestions += 10;
+            if (state.game.score === 10 && finalTime < state.stats.bestTime) {
+                state.stats.bestTime = finalTime;
+            }
+            
+            state.leaderboard.push({
+                name: state.user.name,
+                mode: state.settings.mode,
+                score: state.game.score,
+                time: parseFloat(finalTime.toFixed(1))
+            });
+            state.leaderboard.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                return a.time - b.time;
+            });
+            state.leaderboard = state.leaderboard.slice(0, 50);
+
+            saveLocalStats();
+            switchView('result');
+            uploadDataToGAS();
+        }
+
+        // --- GAS 串接 ---
+        function uploadDataToGAS() {
+            const statusEl = $('upload-status');
+            const payload = {
+                class: state.user.class,
+                seat: state.user.seat,
+                name: state.user.name,
+                mode: state.settings.mode,
+                time: parseFloat(state.game.elapsed.toFixed(1)),
+                score: state.game.score
+            };
+
+            if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "填寫你的GAS網址") {
+                setTimeout(() => {
+                    statusEl.innerHTML = '<i class="fa-solid fa-check text-pop-green mr-2"></i> <span class="text-pop-green">成績已儲存 (尚未設定雲端)</span>';
+                }, 1000);
+                return;
+            }
+
+            statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2 text-pop-blue"></i> 正在上傳成績...';
+
+            fetch(GAS_WEB_APP_URL, {
+                method: 'POST',
+                body: new URLSearchParams(payload),
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            })
+            .then(() => {
+                statusEl.innerHTML = '<i class="fa-solid fa-check text-pop-green mr-2"></i> <span class="text-pop-green">成績上傳成功!</span>';
+            })
+            .catch(() => {
+                statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i> <span class="text-red-500">上傳失敗，請檢查網路</span>';
+            });
+        }
+
+        // --- 排行榜 ---
+        function renderLeaderboard() {
+            const tbody = $('leaderboard-body');
+            tbody.innerHTML = '';
+            const modeMap = { 'dec2bin': '10轉2', 'bin2dec': '2轉10', 'mixed': '混合' };
+
+            if(state.leaderboard.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-slate-400">目前還沒有人挑戰，快來搶下首殺！</td></tr>';
+                return;
+            }
+
+            state.leaderboard.forEach((entry, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b-2 border-slate-200 hover:bg-slate-50";
+                
+                let rankHTML = idx + 1;
+                if (idx === 0) rankHTML = '<i class="fa-solid fa-crown text-pop-yellow text-2xl drop-shadow-sm"></i>';
+                else if (idx === 1) rankHTML = '<span class="text-slate-400 font-black text-xl">2</span>';
+                else if (idx === 2) rankHTML = '<span class="text-amber-600 font-black text-xl">3</span>';
+
+                tr.innerHTML = `
+                    <td class="p-4 text-center border-r-2 border-slate-200 bg-slate-50">${rankHTML}</td>
+                    <td class="p-4 font-black">${entry.name}</td>
+                    <td class="p-4 text-pop-dark/60 text-sm font-bold">${modeMap[entry.mode]}</td>
+                    <td class="p-4 text-center text-pop-green font-black text-xl">${entry.score}/10</td>
+                    <td class="p-4 text-right text-pop-blue font-mono font-black">${entry.time.toFixed(1)}s</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- 教學模式 ---
+        let tutState = { mode: 'dec2bin', value: 13, step: 0 };
+        function setTutorialMode(mode) {
+            tutState.mode = mode;
+            tutState.step = 0;
+            $('tut-btn-dec').className = mode === 'dec2bin' ? 'neo-btn bg-pop-pink text-white px-6 py-2' : 'neo-btn bg-white text-pop-dark px-6 py-2';
+            $('tut-btn-bin').className = mode === 'bin2dec' ? 'neo-btn bg-pop-pink text-white px-6 py-2' : 'neo-btn bg-white text-pop-dark px-6 py-2';
+            randomTutorialValue();
+        }
+        function randomTutorialValue() {
+            tutState.value = Math.floor(Math.random() * 31) + 1;
+            tutState.step = 0;
+            runTutorialStep();
+        }
+        function nextTutorialStep() { tutState.step++; runTutorialStep(); }
+        
+        function runTutorialStep() {
+            const v = tutState.value;
+            const binStr = v.toString(2);
+            if (tutState.mode === 'dec2bin') {
+                const powers = [128, 64, 32, 16, 8, 4, 2, 1];
+                const activeIndices = [];
+                let temp = v;
+                for(let i=0; i<8; i++) {
+                    if(temp >= powers[i]) { activeIndices.push(i); temp -= powers[i]; }
+                }
+
+                if (tutState.step === 0) {
+                    $('tut-desc').innerHTML = `目標：將十進制 <span class="text-pop-pink font-black">${v}</span> 轉為二進制。<br>方法：從左到右，找出能塞進去的最大 <span class="text-pop-yellow px-1 bg-pop-dark rounded">2的次方</span> 燈泡。`;
+                    $('tut-math').innerText = "";
+                    clearLEDs('tut-leds');
+                } else if (tutState.step <= activeIndices.length) {
+                    const currentPowerIndex = activeIndices[tutState.step - 1];
+                    const pVal = powers[currentPowerIndex];
+                    $(`tut-leds-bulb-${7 - currentPowerIndex}`).classList.add('on');
+                    $('tut-desc').innerHTML = `數字包含 <span class="text-pop-green font-black">${pVal}</span>，點亮該燈泡 (記作 1)。`;
+                    let eq = `${v} = `;
+                    for(let k=0; k<tutState.step; k++) eq += powers[activeIndices[k]] + (k === tutState.step-1 ? "" : " + ");
+                    $('tut-math').innerText = eq;
+                } else {
+                    $('tut-desc').innerHTML = `轉換完成！<br>二進制結果為：<span class="text-pop-blue font-black bg-slate-100 px-2 rounded">${binStr}</span>`;
+                    updateLEDs('tut-leds', v);
+                    tutState.step = -1;
+                }
+            } else {
+                updateLEDs('tut-leds', v);
+                if (tutState.step === 0) {
+                    $('tut-desc').innerHTML = `目標：將二進制 <span class="text-pop-blue font-black bg-slate-100 px-2 rounded">${binStr}</span> 轉為十進制。<br>方法：把所有 <span class="text-pop-yellow px-1 bg-pop-dark rounded">亮起來</span> 的燈泡數字加總。`;
+                    $('tut-math').innerText = "";
+                } else if (tutState.step === 1) {
+                    $('tut-desc').innerHTML = `亮起來的燈泡代表的數值分別是：`;
+                    let parts = [];
+                    for(let i=0; i<8; i++) { if ((v & (1 << i)) !== 0) parts.push(Math.pow(2, i)); }
+                    parts.reverse();
+                    $('tut-math').innerText = parts.join(' + ');
+                } else {
+                    $('tut-desc').innerHTML = `相加後得出十進制結果：`;
+                    $('tut-math').innerText = `= ${v}`;
+                    tutState.step = -1;
+                }
+            }
+        }
+
+        // --- 教師密碼與後台 ---
+        function checkTeacherPassword() {
+            const pwd = prompt("請輸入教師密碼：");
+            if (!pwd) return;
+            
+            // 密碼驗證邏輯：對輸入值進行 Base64 編碼，再反轉字串。
+            // 0426 的加密結果為 "==gNyQDM"
+            const encrypted = btoa(pwd).split('').reverse().join('');
+            if (encrypted === "==gNyQDM") {
+                switchView('teacher');
+                fetchTeacherData();
+            } else {
+                alert("密碼錯誤！");
+            }
+        }
+
+        function fetchTeacherData() {
+            const tbody = $('teacher-data-body');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold"><i class="fa-solid fa-spinner fa-spin text-3xl mb-2 text-pop-blue"></i><br>努力連線雲端讀取中...</td></tr>';
+            
+            if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "填寫你的GAS網址") {
+                 tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold text-red-500"><i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i><br>請先在程式碼設定 GAS_WEB_APP_URL 才能讀取雲端資料。</td></tr>';
+                 return;
+            }
+
+            fetch(GAS_WEB_APP_URL)
+                .then(res => res.json())
+                .then(result => {
+                    if (result.status === 'success' && result.data.length > 0) {
+                        renderTeacherTable(result.data);
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold text-slate-500">雲端試算表目前沒有資料。</td></tr>';
+                    }
+                })
+                .catch(err => {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold text-red-500">讀取失敗，可能是跨域(CORS)設定問題，或網址錯誤。</td></tr>';
+                });
+        }
+
+        function renderTeacherTable(data) {
+            const tbody = $('teacher-data-body');
+            tbody.innerHTML = '';
+            const modeMap = { 'dec2bin': '10轉2', 'bin2dec': '2轉10', 'mixed': '混合' };
+            
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b-2 border-slate-200 hover:bg-slate-50";
+                
+                // 設定滿分樣式
+                const scoreStyle = parseInt(row.score) === 10 ? "text-pop-green font-black" : "text-pop-dark";
+
+                tr.innerHTML = `
+                    <td class="p-3 text-xs text-slate-500">${row.timestamp ? new Date(row.timestamp).toLocaleString('zh-TW', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-'}</td>
+                    <td class="p-3 font-bold">${row.class}</td>
+                    <td class="p-3">${row.seat}</td>
+                    <td class="p-3 font-black text-pop-dark">${row.name}</td>
+                    <td class="p-3 text-xs">${modeMap[row.mode] || row.mode}</td>
+                    <td class="p-3 text-center ${scoreStyle} text-lg">${row.score}</td>
+                    <td class="p-3 text-right font-mono text-pop-blue">${row.time}s</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    })();
+    </script>
+</body>
+</html>
