@@ -516,14 +516,14 @@
 
     </main>
 
-    <!-- 安全防護：使用 IIFE 閉包完全封裝程式碼，防止學生在控制台存取變數查答案 -->
+    <!-- 安全防護：使用 IIFE 閉包完全封裝程式碼 -->
     <script>
     (function() {
         /**
          * ==========================================
          * 系統設定 (Google Apps Script URL)
          * ==========================================
-         * 請在此填入你部署的 GAS Web App URL
+         * 這裡已經幫你填上最新的網址了！
          */
         const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyV2Sjk_1WynzJVKFB2IZDkN06etsLusOY2XBsbd7qKiPAeIQVZp2d5QL6xv77zozJl-A/exec"; 
 
@@ -535,7 +535,6 @@
             user: { class: '', seat: '', name: '' },
             settings: { mode: 'mixed', maxRange: 15 }, 
             game: {
-                // 不直接儲存答案的字串，僅儲存題目與正確解答的驗證機制
                 currentType: '',
                 currentQuestionVal: 0, 
                 questionCount: 0,
@@ -917,13 +916,6 @@
                 score: state.game.score
             };
 
-            if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "填寫你的GAS網址") {
-                setTimeout(() => {
-                    statusEl.innerHTML = '<i class="fa-solid fa-check text-pop-green mr-2"></i> <span class="text-pop-green">成績已儲存 (尚未設定雲端)</span>';
-                }, 1000);
-                return;
-            }
-
             statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2 text-pop-blue"></i> 正在上傳成績...';
 
             fetch(GAS_WEB_APP_URL, {
@@ -1033,7 +1025,7 @@
             }
         }
 
-        // --- 教師密碼與後台 ---
+        // --- 教師密碼與後台 (已強化錯誤偵測) ---
         function checkTeacherPassword() {
             const pwd = prompt("請輸入教師密碼：");
             if (!pwd) return;
@@ -1053,23 +1045,38 @@
             const tbody = $('teacher-data-body');
             tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold"><i class="fa-solid fa-spinner fa-spin text-3xl mb-2 text-pop-blue"></i><br>努力連線雲端讀取中...</td></tr>';
             
-            if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "填寫你的GAS網址") {
-                 tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold text-red-500"><i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i><br>請先在程式碼設定 GAS_WEB_APP_URL 才能讀取雲端資料。</td></tr>';
-                 return;
-            }
-
-            fetch(GAS_WEB_APP_URL)
-                .then(res => res.json())
-                .then(result => {
-                    if (result.status === 'success' && result.data.length > 0) {
+            // 加入 redirect: 'follow' 確保能正確跟隨 GAS 的轉址
+            fetch(GAS_WEB_APP_URL, {
+                method: 'GET',
+                redirect: 'follow'
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('網路回應錯誤');
+                return res.text(); // 先轉為純文字，避免因為權限錯誤回傳 HTML 導致 json 解析當機
+            })
+            .then(text => {
+                try {
+                    const result = JSON.parse(text);
+                    if (result.status === 'success' && result.data && result.data.length > 0) {
                         renderTeacherTable(result.data);
                     } else {
-                        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold text-slate-500">雲端試算表目前沒有資料。</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold text-slate-500"><i class="fa-solid fa-folder-open text-3xl mb-2"></i><br>目前雲端試算表還沒有任何學生的挑戰紀錄。</td></tr>';
                     }
-                })
-                .catch(err => {
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold text-red-500">讀取失敗，可能是跨域(CORS)設定問題，或網址錯誤。</td></tr>';
-                });
+                } catch (e) {
+                    // 如果解析 JSON 失敗，高機率是因為 GAS 權限沒開，回傳了 Google 登入網頁的 HTML
+                    console.error("解析錯誤 (這通常代表權限不正確):", text.substring(0, 100));
+                    tbody.innerHTML = `
+                        <tr><td colspan="7" class="text-center p-10 font-bold text-red-500">
+                            <i class="fa-solid fa-triangle-exclamation text-4xl mb-3"></i><br>
+                            讀取失敗！這通常是因為 Google Apps Script 的權限沒有公開。<br>
+                            <span class="text-sm mt-2 block text-pop-dark">請回到 GAS 部署畫面，確認「誰可以存取」是否設定為 <b>「所有人 (包含匿名使用者)」</b></span>
+                        </td></tr>`;
+                }
+            })
+            .catch(err => {
+                console.error("連線錯誤:", err);
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold text-red-500">網路連線或 CORS 錯誤，無法讀取資料。</td></tr>';
+            });
         }
 
         function renderTeacherTable(data) {
