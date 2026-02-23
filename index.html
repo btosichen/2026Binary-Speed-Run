@@ -201,13 +201,13 @@
                             <div class="grid grid-cols-3 gap-3">
                                 <button data-mode="dec2bin" class="mode-btn neo-btn bg-slate-100 text-pop-dark py-2">10轉2</button>
                                 <button data-mode="bin2dec" class="mode-btn neo-btn bg-slate-100 text-pop-dark py-2">2轉10</button>
-                                <button data-mode="mixed" class="mode-btn neo-btn bg-pop-blue text-white py-2">混合</button>
+                                <button data-mode="mixed" class="mode-btn neo-btn bg-pop-blue text-white py-2 shadow-[2px_2px_0px_#1e293b]">混合</button>
                             </div>
                         </div>
                         <div>
                             <label class="font-bold text-pop-dark block mb-2">數字難度</label>
                             <div class="grid grid-cols-3 gap-3">
-                                <button data-diff="15" class="diff-btn neo-btn bg-pop-purple text-white py-2">1~15</button>
+                                <button data-diff="15" class="diff-btn neo-btn bg-pop-purple text-white py-2 shadow-[2px_2px_0px_#1e293b]">1~15</button>
                                 <button data-diff="31" class="diff-btn neo-btn bg-slate-100 text-pop-dark py-2">1~31</button>
                                 <button data-diff="63" class="diff-btn neo-btn bg-slate-100 text-pop-dark py-2">1~63</button>
                             </div>
@@ -368,8 +368,8 @@
 
                 <!-- 主遊戲區 -->
                 <div class="p-8 flex flex-col items-center relative">
-                    <!-- 回饋動畫 -->
-                    <div id="feedback-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-0 transition-opacity duration-200 z-50 rounded-b-xl">
+                    <!-- 回饋動畫 (改為快速閃爍，不阻擋操作) -->
+                    <div id="feedback-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-0 transition-opacity duration-150 z-50 rounded-b-xl">
                         <div id="feedback-icon" class="text-9xl drop-shadow-[0_10px_0_rgba(0,0,0,0.2)]"></div>
                     </div>
 
@@ -545,6 +545,7 @@
                 timerInterval: null,
                 elapsed: 0,
                 isActive: false,
+                isTransitioning: false,
                 currentInput: ''
             },
             stats: { games: 0, totalScore: 0, totalQuestions: 0, bestTime: Infinity }
@@ -640,6 +641,7 @@
             // 遊戲鍵盤與操作
             document.querySelectorAll('.game-key').forEach(btn => {
                 btn.onclick = (e) => {
+                    if (state.game.isTransitioning) return; 
                     e.currentTarget.classList.add('active-press');
                     setTimeout(() => e.currentTarget.classList.remove('active-press'), 100);
                     appendInput(e.currentTarget.dataset.key);
@@ -739,6 +741,7 @@
             state.game.questionCount = 1;
             state.game.score = 0;
             state.game.isActive = true;
+            state.game.isTransitioning = false; 
             $('game-progress').style.width = '0%';
             
             switchView('game');
@@ -751,6 +754,8 @@
         }
 
         function generateNextQuestion() {
+            // 同步解除鎖定，因為沒有延遲，所以學生可以直接進行下一題
+            state.game.isTransitioning = false; 
             let m = state.settings.mode;
             if (m === 'mixed') m = Math.random() > 0.5 ? 'dec2bin' : 'bin2dec';
             
@@ -758,6 +763,7 @@
             state.game.currentType = m;
             state.game.currentQuestionVal = val;
             
+            // 【關鍵】清空輸入框，只要這是空的，狂按 Enter 就不會被重複計分
             state.game.currentInput = '';
             $('game-input').value = '';
             $('game-q-count').innerText = `${state.game.questionCount} / 10`;
@@ -791,7 +797,7 @@
         }
 
         function appendInput(char) {
-            if (!state.game.isActive) return;
+            if (!state.game.isActive || state.game.isTransitioning) return; 
             state.game.currentInput += char;
             $('game-input').value = state.game.currentInput;
             
@@ -802,19 +808,19 @@
         }
 
         function deleteInput() {
-            if (!state.game.isActive) return;
+            if (!state.game.isActive || state.game.isTransitioning) return; 
             state.game.currentInput = state.game.currentInput.slice(0, -1);
             $('game-input').value = state.game.currentInput;
         }
 
         function clearInput() {
-            if (!state.game.isActive) return;
+            if (!state.game.isActive || state.game.isTransitioning) return; 
             state.game.currentInput = '';
             $('game-input').value = '';
         }
 
         function handleGlobalKeydown(e) {
-            if (state.currentView !== 'game' || !state.game.isActive) return;
+            if (state.currentView !== 'game' || !state.game.isActive || state.game.isTransitioning) return; 
             const isDec2Bin = state.game.currentType === 'dec2bin';
 
             if (e.key === 'Enter') submitAnswer();
@@ -827,7 +833,11 @@
         }
 
         function submitAnswer() {
-            if (!state.game.isActive || state.game.currentInput === '') return;
+            // 防呆：只要沒輸入任何內容，就不允許送出 (解決按住 Enter 會飆升題數的問題)
+            if (!state.game.isActive || state.game.currentInput === '' || state.game.isTransitioning) return;
+            
+            // 瞬間鎖定
+            state.game.isTransitioning = true; 
             
             let isCorrect = false;
             if (state.game.currentType === 'dec2bin') {
@@ -836,48 +846,69 @@
                 if (parseInt(state.game.currentInput, 10) === state.game.currentQuestionVal) isCorrect = true;
             }
 
+            // 閃爍一下動畫 (但不阻擋進程)
             showFeedback(isCorrect);
             if (isCorrect) state.game.score++;
             
+            // 【關鍵修改】直接結算或下一題，不使用 setTimeout 延遲
             if (state.game.questionCount >= 10) {
-                setTimeout(endGame, 500);
+                endGame();
             } else {
                 state.game.questionCount++;
-                setTimeout(generateNextQuestion, 500);
+                generateNextQuestion();
             }
         }
+
+        let feedbackTimeout;
+        let shakeTimeout;
 
         function showFeedback(isCorrect) {
             const overlay = $('feedback-overlay');
             const icon = $('feedback-icon');
             const container = $('view-game').querySelector('.neo-box');
 
+            // 每次觸發都清除上一次的動畫計時器，避免快速送出時動畫錯亂
+            clearTimeout(feedbackTimeout);
+            clearTimeout(shakeTimeout);
+            container.classList.remove('shake');
+
             if (isCorrect) {
                 icon.className = 'fa-solid fa-check text-pop-green';
                 overlay.style.backgroundColor = 'rgba(0, 230, 118, 0.2)';
             } else {
                 icon.className = 'fa-solid fa-xmark text-red-500';
-                overlay.style.backgroundColor = 'rgba(2ef, 68, 68, 0.2)';
+                overlay.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                
+                // 強制重繪讓錯題晃動動畫可以連續觸發
+                void container.offsetWidth; 
                 container.classList.add('shake');
-                setTimeout(() => container.classList.remove('shake'), 400);
+                shakeTimeout = setTimeout(() => container.classList.remove('shake'), 400);
             }
+            
+            // 讓動畫出現，並在 150 毫秒後「不阻擋」地快速消失
             overlay.classList.remove('opacity-0');
-            setTimeout(() => {
+            feedbackTimeout = setTimeout(() => {
                 overlay.classList.add('opacity-0');
-            }, 300);
+            }, 150);
         }
 
         function abortGame() {
             clearInterval(state.game.timerInterval);
             state.game.isActive = false;
+            state.game.isTransitioning = false;
             switchView('menu');
         }
 
         function endGame() {
+            state.game.isTransitioning = false;
             clearInterval(state.game.timerInterval);
             state.game.isActive = false;
             $('game-progress').style.width = '100%';
             
+            // 【雙重防呆】強制分數最高只能 10 分，題數最高只能 10 題
+            if (state.game.score > 10) state.game.score = 10;
+            if (state.game.questionCount > 10) state.game.questionCount = 10;
+
             const finalTime = state.game.elapsed;
             $('result-time').innerText = finalTime.toFixed(1) + 's';
             $('result-score').innerText = state.game.score + '/10';
