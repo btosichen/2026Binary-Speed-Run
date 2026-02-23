@@ -457,11 +457,14 @@
         <!-- ==================== 視圖 7: 排行榜 ==================== -->
         <div id="view-leaderboard" class="w-full max-w-3xl hidden flex-col transform transition-all duration-500 opacity-0 scale-95">
             <div class="flex items-center justify-between mb-6">
-                <h2 class="text-3xl font-black text-pop-dark bg-white neo-box px-6 py-2 inline-block"><i class="fa-solid fa-ranking-star text-pop-yellow"></i> 英雄榜</h2>
+                <h2 class="text-3xl font-black text-pop-dark bg-white neo-box px-6 py-2 inline-block"><i class="fa-solid fa-ranking-star text-pop-yellow"></i> 雲端英雄榜</h2>
                 <button class="btn-back neo-btn bg-white text-pop-dark px-4 py-2"><i class="fa-solid fa-arrow-left"></i> 返回</button>
             </div>
 
             <div class="neo-box bg-white overflow-hidden">
+                <div class="p-3 bg-slate-100 border-b-4 border-pop-dark flex justify-between items-center text-sm font-bold text-pop-dark">
+                    <span><i class="fa-solid fa-cloud text-pop-blue"></i> 讀取全班最新戰績</span>
+                </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -523,12 +526,11 @@
          * ==========================================
          * 系統設定 (Google Apps Script URL)
          * ==========================================
-         * 這裡已經幫你填上最新的網址了！
          */
         const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyV2Sjk_1WynzJVKFB2IZDkN06etsLusOY2XBsbd7qKiPAeIQVZp2d5QL6xv77zozJl-A/exec"; 
 
         /**
-         * 內部狀態 (無法從外部 window.state 讀取)
+         * 內部狀態
          */
         const state = {
             currentView: 'login',
@@ -545,8 +547,7 @@
                 isActive: false,
                 currentInput: ''
             },
-            stats: { games: 0, totalScore: 0, totalQuestions: 0, bestTime: Infinity },
-            leaderboard: [] 
+            stats: { games: 0, totalScore: 0, totalQuestions: 0, bestTime: Infinity }
         };
 
         const $ = id => document.getElementById(id);
@@ -605,7 +606,12 @@
             $('btn-start-quick').onclick = startQuickGame;
             $('btn-nav-map').onclick = () => switchView('map');
             $('btn-nav-tutorial').onclick = () => { switchView('tutorial'); setTutorialMode('dec2bin'); };
-            $('btn-nav-leaderboard').onclick = () => { renderLeaderboard(); switchView('leaderboard'); };
+            
+            // 呼叫雲端排行榜
+            $('btn-nav-leaderboard').onclick = () => { 
+                switchView('leaderboard'); 
+                fetchLeaderboardData(); 
+            };
             
             // 返回按鈕群
             document.querySelectorAll('.btn-back').forEach(btn => {
@@ -657,13 +663,10 @@
         function loadLocalStats() {
             const saved = localStorage.getItem('neoBinStats');
             if (saved) state.stats = JSON.parse(saved);
-            const savedLb = localStorage.getItem('neoBinLb');
-            if (savedLb) state.leaderboard = JSON.parse(savedLb);
         }
 
         function saveLocalStats() {
             localStorage.setItem('neoBinStats', JSON.stringify(state.stats));
-            localStorage.setItem('neoBinLb', JSON.stringify(state.leaderboard));
             updateDashboardStats();
         }
 
@@ -747,7 +750,6 @@
             }, 300);
         }
 
-        // 即時產生題目，防止從陣列中查答案
         function generateNextQuestion() {
             let m = state.settings.mode;
             if (m === 'mixed') m = Math.random() > 0.5 ? 'dec2bin' : 'bin2dec';
@@ -887,18 +889,6 @@
                 state.stats.bestTime = finalTime;
             }
             
-            state.leaderboard.push({
-                name: state.user.name,
-                mode: state.settings.mode,
-                score: state.game.score,
-                time: parseFloat(finalTime.toFixed(1))
-            });
-            state.leaderboard.sort((a, b) => {
-                if (b.score !== a.score) return b.score - a.score;
-                return a.time - b.time;
-            });
-            state.leaderboard = state.leaderboard.slice(0, 50);
-
             saveLocalStats();
             switchView('result');
             uploadDataToGAS();
@@ -931,32 +921,74 @@
             });
         }
 
-        // --- 排行榜 ---
-        function renderLeaderboard() {
+        // --- 排行榜 (改為雲端讀取) ---
+        function fetchLeaderboardData() {
+            const tbody = $('leaderboard-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center p-10 font-bold"><i class="fa-solid fa-spinner fa-spin text-3xl mb-2 text-pop-blue"></i><br>正在同步全班戰績...</td></tr>';
+
+            fetch(GAS_WEB_APP_URL, {
+                method: 'GET',
+                redirect: 'follow'
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('網路回應錯誤');
+                return res.text();
+            })
+            .then(text => {
+                try {
+                    const result = JSON.parse(text);
+                    if (result.status === 'success' && result.data && result.data.length > 0) {
+                        
+                        // 雲端資料排序：先比分數(大到小)，再比時間(少到多)
+                        let sortedData = result.data.sort((a, b) => {
+                            let scoreA = parseInt(a.score);
+                            let scoreB = parseInt(b.score);
+                            let timeA = parseFloat(a.time);
+                            let timeB = parseFloat(b.time);
+                            
+                            if (scoreB !== scoreA) return scoreB - scoreA;
+                            return timeA - timeB;
+                        });
+                        
+                        renderLeaderboard(sortedData);
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-slate-400 font-bold"><i class="fa-solid fa-ghost text-3xl mb-2"></i><br>目前雲端還沒有人挑戰，快來搶下首殺！</td></tr>';
+                    }
+                } catch (e) {
+                    console.error("解析錯誤:", e);
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-red-500 font-bold"><i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i><br>無法讀取排行榜，請確認雲端連線與權限設定。</td></tr>';
+                }
+            })
+            .catch(err => {
+                console.error("連線錯誤:", err);
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-red-500 font-bold"><i class="fa-solid fa-wifi text-3xl mb-2"></i><br>網路連線錯誤，無法讀取資料。</td></tr>';
+            });
+        }
+
+        function renderLeaderboard(data) {
             const tbody = $('leaderboard-body');
             tbody.innerHTML = '';
             const modeMap = { 'dec2bin': '10轉2', 'bin2dec': '2轉10', 'mixed': '混合' };
 
-            if(state.leaderboard.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-slate-400">目前還沒有人挑戰，快來搶下首殺！</td></tr>';
-                return;
-            }
-
-            state.leaderboard.forEach((entry, idx) => {
+            // 只顯示前 50 名
+            data.slice(0, 50).forEach((entry, idx) => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b-2 border-slate-200 hover:bg-slate-50";
                 
                 let rankHTML = idx + 1;
-                if (idx === 0) rankHTML = '<i class="fa-solid fa-crown text-pop-yellow text-2xl drop-shadow-sm"></i>';
-                else if (idx === 1) rankHTML = '<span class="text-slate-400 font-black text-xl">2</span>';
-                else if (idx === 2) rankHTML = '<span class="text-amber-600 font-black text-xl">3</span>';
+                if (idx === 0) rankHTML = '<i class="fa-solid fa-crown text-pop-yellow text-2xl drop-shadow-[0_2px_0_#1e293b] animate-bounce"></i>';
+                else if (idx === 1) rankHTML = '<span class="text-slate-400 font-black text-2xl drop-shadow-md">2</span>';
+                else if (idx === 2) rankHTML = '<span class="text-amber-600 font-black text-2xl drop-shadow-md">3</span>';
 
                 tr.innerHTML = `
                     <td class="p-4 text-center border-r-2 border-slate-200 bg-slate-50">${rankHTML}</td>
-                    <td class="p-4 font-black">${entry.name}</td>
-                    <td class="p-4 text-pop-dark/60 text-sm font-bold">${modeMap[entry.mode]}</td>
+                    <td class="p-4 leading-tight">
+                        <span class="text-xs text-pop-dark/60 font-bold bg-slate-200 px-2 rounded-full mb-1 inline-block">${entry.class}班 ${entry.seat}號</span><br>
+                        <span class="font-black text-pop-dark text-lg">${entry.name}</span>
+                    </td>
+                    <td class="p-4 text-pop-dark/60 text-sm font-bold">${modeMap[entry.mode] || entry.mode}</td>
                     <td class="p-4 text-center text-pop-green font-black text-xl">${entry.score}/10</td>
-                    <td class="p-4 text-right text-pop-blue font-mono font-black">${entry.time.toFixed(1)}s</td>
+                    <td class="p-4 text-right text-pop-blue font-mono font-black text-xl">${parseFloat(entry.time).toFixed(1)}s</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -1025,12 +1057,11 @@
             }
         }
 
-        // --- 教師密碼與後台 (已強化錯誤偵測) ---
+        // --- 教師密碼與後台 ---
         function checkTeacherPassword() {
             const pwd = prompt("請輸入教師密碼：");
             if (!pwd) return;
             
-            // 密碼驗證邏輯：對輸入值進行 Base64 編碼，再反轉字串。
             // 0426 的加密結果為 "==gNyQDM"
             const encrypted = btoa(pwd).split('').reverse().join('');
             if (encrypted === "==gNyQDM") {
@@ -1045,14 +1076,13 @@
             const tbody = $('teacher-data-body');
             tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold"><i class="fa-solid fa-spinner fa-spin text-3xl mb-2 text-pop-blue"></i><br>努力連線雲端讀取中...</td></tr>';
             
-            // 加入 redirect: 'follow' 確保能正確跟隨 GAS 的轉址
             fetch(GAS_WEB_APP_URL, {
                 method: 'GET',
                 redirect: 'follow'
             })
             .then(res => {
                 if (!res.ok) throw new Error('網路回應錯誤');
-                return res.text(); // 先轉為純文字，避免因為權限錯誤回傳 HTML 導致 json 解析當機
+                return res.text();
             })
             .then(text => {
                 try {
@@ -1063,8 +1093,7 @@
                         tbody.innerHTML = '<tr><td colspan="7" class="text-center p-10 font-bold text-slate-500"><i class="fa-solid fa-folder-open text-3xl mb-2"></i><br>目前雲端試算表還沒有任何學生的挑戰紀錄。</td></tr>';
                     }
                 } catch (e) {
-                    // 如果解析 JSON 失敗，高機率是因為 GAS 權限沒開，回傳了 Google 登入網頁的 HTML
-                    console.error("解析錯誤 (這通常代表權限不正確):", text.substring(0, 100));
+                    console.error("解析錯誤:", text.substring(0, 100));
                     tbody.innerHTML = `
                         <tr><td colspan="7" class="text-center p-10 font-bold text-red-500">
                             <i class="fa-solid fa-triangle-exclamation text-4xl mb-3"></i><br>
@@ -1088,7 +1117,6 @@
                 const tr = document.createElement('tr');
                 tr.className = "border-b-2 border-slate-200 hover:bg-slate-50";
                 
-                // 設定滿分樣式
                 const scoreStyle = parseInt(row.score) === 10 ? "text-pop-green font-black" : "text-pop-dark";
 
                 tr.innerHTML = `
